@@ -1,0 +1,643 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Modern Arch Linux Handbook v14</title>
+    <meta name="description" content="A next-generation, AI-enhanced interactive guide for installing Arch Linux.">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Inter', 'sans-serif'], mono: ['JetBrains Mono', 'monospace'], },
+                    colors: { arch: { 500: '#1793d1', 600: '#1482b8', }, },
+                }
+            }
+        }
+    </script>
+
+    <style>
+        /* Base & Transitions */
+        body { transition: background-color 0.3s, color 0.3s; }
+        
+        /* Scrollbar */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        .dark ::-webkit-scrollbar-thumb { background: #475569; }
+        
+        /* Components */
+        .step-checkbox { appearance: none; background-color: transparent; width: 1.25em; height: 1.25em; border: 2px solid currentColor; border-radius: 0.25em; display: grid; place-content: center; cursor: pointer; margin-top: 4px; }
+        .step-checkbox::before { content: ""; width: 0.65em; height: 0.65em; transform: scale(0); transition: 120ms transform ease-in-out; box-shadow: inset 1em 1em currentColor; transform-origin: center; clip-path: polygon(14% 44%, 0 65%, 50% 100%, 100% 16%, 80% 0%, 43% 62%); }
+        .step-checkbox:checked::before { transform: scale(1); }
+        .step-checkbox:checked + div { opacity: 0.5; text-decoration: line-through; }
+
+        /* Rescue Mode */
+        .rescue-active aside nav a.active { color: #ef4444 !important; border-left-color: #ef4444 !important; background-color: rgba(239, 68, 68, 0.1) !important; }
+        .rescue-active header { border-bottom-color: #ef4444 !important; }
+
+        /* Animations */
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(-5px); } to { opacity: 1; transform: translateY(0); } }
+        .search-result { animation: fadeIn 0.2s ease-out; }
+
+        /* Sidebar Active State */
+        aside nav a.active { border-left-width: 3px; font-weight: 600; }
+        html:not(.dark) aside nav a.active { color: #0f172a; border-left-color: #0f172a; background-color: #f1f5f9; }
+        html.dark aside nav a.active { color: #f8fafc; border-left-color: #38bdf8; background-color: #1e293b; }
+
+        /* PRINT STYLES */
+        @media print {
+            aside, header, .fixed, #chat-window, button { display: none !important; }
+            main { width: 100% !important; margin: 0 !important; padding: 0 !important; grid-column: span 4 !important; }
+            body { background: white !important; color: black !important; }
+            .code-block { border: 1px solid #ccc; page-break-inside: avoid; }
+            pre { white-space: pre-wrap; word-wrap: break-word; }
+            .hidden { display: block !important; } /* Show all hidden content */
+            .rescue-only, #rescue-banner, #medic-modal { display: none !important; } /* Hide dynamic tools */
+        }
+    </style>
+</head>
+<body class="text-slate-800 bg-slate-50 dark:bg-slate-900 dark:text-slate-200">
+
+    <!-- Header -->
+    <header class="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 sticky top-0 z-30 transition-colors duration-300">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex flex-col md:flex-row md:justify-between md:items-center h-auto md:h-16 py-3 md:py-0 gap-3">
+                <div class="flex items-center justify-between w-full md:w-auto">
+                    <h1 id="app-title" class="text-xl md:text-2xl font-bold text-slate-900 dark:text-white tracking-tight whitespace-nowrap">
+                        Arch Handbook <span class="text-xs font-medium text-white bg-arch-600 px-2 py-0.5 rounded ml-2 align-middle">v14.0</span>
+                    </h1>
+                    <!-- Mobile Menu Button (Hidden on Desktop) -->
+                    <button id="mobile-menu-btn" class="md:hidden text-slate-600 dark:text-slate-300">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" /></svg>
+                    </button>
+                </div>
+                
+                <!-- Search -->
+                <div class="relative w-full md:w-96 group">
+                    <div class="flex items-center relative">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 absolute left-3 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+                        <input type="text" id="smart-search" placeholder="Search (Press '/')..." class="w-full bg-slate-100 dark:bg-slate-800 border-none rounded-lg pl-10 pr-4 py-2 text-sm focus:ring-2 focus:ring-arch-500 dark:text-white transition-all">
+                    </div>
+                    <div id="search-results" class="absolute top-full left-0 right-0 mt-2 bg-white dark:bg-slate-800 rounded-lg shadow-2xl border border-slate-200 dark:border-slate-700 hidden z-50 overflow-hidden"></div>
+                </div>
+
+                <!-- Controls -->
+                <div class="flex items-center gap-3">
+                    <button id="theme-toggle" class="p-2 text-slate-500 hover:text-arch-600 dark:text-slate-400 dark:hover:text-arch-500 transition-colors" title="Toggle Dark Mode">
+                        <span id="theme-icon-sun" class="hidden">☀️</span>
+                        <span id="theme-icon-moon">🌙</span>
+                    </button>
+                    <button id="export-btn" class="p-2 text-slate-500 hover:text-arch-600 dark:text-slate-400 dark:hover:text-arch-500 transition-colors" title="Export Markdown">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
+                    </button>
+                    <button id="rescue-toggle" class="flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:border-red-500 hover:text-red-500 transition-all group">
+                        <span class="text-sm">⛑️</span>
+                        <span class="text-xs font-bold text-slate-600 dark:text-slate-300 group-hover:text-red-500">Rescue</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative">
+        <div class="grid grid-cols-1 md:grid-cols-4 md:gap-12 lg:gap-16">
+            
+            <!-- Sidebar -->
+            <aside class="hidden md:block md:col-span-1 py-6 md:sticky md:top-20 md:h-[calc(100vh-5rem)] md:overflow-y-auto">
+                <nav class="space-y-1">
+                    <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3 px-3">Configuration</h3>
+                    <a href="#configurator" class="block text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 py-2 px-3 rounded-md text-sm transition-colors">Hardware Setup</a>
+                    <a href="#scout" class="block text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 py-2 px-3 rounded-md text-sm transition-colors">Hardware Scout</a>
+                    
+                    <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wider mt-8 mb-3 px-3">The Handbook</h3>
+                    <a href="#phase-1" class="block text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 py-2 px-3 rounded-md text-sm border-l-2 border-transparent transition-colors">1. Environment</a>
+                    <a href="#phase-2" class="block text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 py-2 px-3 rounded-md text-sm border-l-2 border-transparent transition-colors">2. Installation</a>
+                    <a href="#phase-3" class="block text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 py-2 px-3 rounded-md text-sm border-l-2 border-transparent transition-colors">3. Configuration</a>
+                    <div class="install-only">
+                        <a href="#phase-4" class="block text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 py-2 px-3 rounded-md text-sm border-l-2 border-transparent transition-colors">4. Ecosystem</a>
+                        <a href="#phase-5" class="block text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 py-2 px-3 rounded-md text-sm border-l-2 border-transparent transition-colors">5. Desktop</a>
+                        <a href="#phase-6" class="block text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 py-2 px-3 rounded-md text-sm border-l-2 border-transparent transition-colors">6. Maintenance</a>
+                    </div>
+                </nav>
+            </aside>
+
+            <!-- Main Content -->
+            <main class="md:col-span-3 py-6 md:py-10 space-y-16 pb-32 w-full">
+                
+                <!-- RESCUE BANNER -->
+                <div id="rescue-banner" class="hidden bg-red-50 dark:bg-red-900/20 border-l-4 border-red-500 p-6 rounded-r-lg shadow-sm animate-fade-in">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <h2 class="text-2xl font-bold text-red-700 dark:text-red-400 flex items-center gap-2"><span class="text-3xl">🚑</span> System Rescue Mode</h2>
+                            <p class="text-red-600 dark:text-red-300 mt-2">Showing recovery commands for a broken system. Uncheck "Rescue" to return to install mode.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- CONFIGURATOR -->
+                <section id="configurator" class="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700">
+                    <div class="flex items-center justify-between mb-6 border-b border-slate-100 dark:border-slate-700 pb-4">
+                        <div class="flex items-center gap-3">
+                            <div class="bg-arch-600 text-white p-2 rounded-lg"><svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" /></svg></div>
+                            <h2 class="text-xl font-bold">System Configurator</h2>
+                        </div>
+                        <span class="text-xs text-slate-400 dark:text-slate-500 font-mono">Autosaved</span>
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                        <div>
+                            <label class="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase mb-2 block">Processor</label>
+                            <div class="flex gap-2">
+                                <label class="flex-1 cursor-pointer"><input type="radio" name="cpu" value="amd" class="peer sr-only" checked><div class="peer-checked:bg-arch-600 peer-checked:text-white peer-checked:border-arch-600 bg-slate-100 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-300 rounded-lg py-2 text-center text-sm font-medium transition-all hover:bg-slate-200 dark:hover:bg-slate-600">AMD</div></label>
+                                <label class="flex-1 cursor-pointer"><input type="radio" name="cpu" value="intel" class="peer sr-only"><div class="peer-checked:bg-arch-600 peer-checked:text-white peer-checked:border-arch-600 bg-slate-100 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-300 rounded-lg py-2 text-center text-sm font-medium transition-all hover:bg-slate-200 dark:hover:bg-slate-600">Intel</div></label>
+                            </div>
+                        </div>
+                        <div>
+                            <label class="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase mb-2 block">Graphics</label>
+                            <div class="flex gap-2">
+                                <label class="flex-1 cursor-pointer"><input type="radio" name="gpu" value="amd" class="peer sr-only" checked><div class="peer-checked:bg-arch-600 peer-checked:text-white peer-checked:border-arch-600 bg-slate-100 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-300 rounded-lg py-2 text-center text-sm font-medium transition-all hover:bg-slate-200 dark:hover:bg-slate-600">AMD</div></label>
+                                <label class="flex-1 cursor-pointer"><input type="radio" name="gpu" value="nvidia" class="peer sr-only"><div class="peer-checked:bg-arch-600 peer-checked:text-white peer-checked:border-arch-600 bg-slate-100 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-300 rounded-lg py-2 text-center text-sm font-medium transition-all hover:bg-slate-200 dark:hover:bg-slate-600">Nvidia</div></label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mt-6 bg-slate-50 dark:bg-slate-900 p-4 rounded-lg border border-slate-200 dark:border-slate-700">
+                        <div class="flex justify-between items-center mb-2">
+                            <label class="text-xs font-bold text-slate-500 uppercase">3. Magic Paste (UUIDs)</label>
+                            <button id="magic-btn" class="bg-slate-800 dark:bg-slate-700 text-white px-3 py-1 rounded text-xs font-bold hover:bg-slate-700 dark:hover:bg-slate-600 transition-colors">✨ Auto-Fill</button>
+                        </div>
+                        <textarea id="magic-paste" rows="2" class="w-full bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-lg p-2 text-xs font-mono focus:ring-2 focus:ring-arch-500 dark:text-slate-300" placeholder="Paste output of 'lsblk -f' here..."></textarea>
+                        <div class="mt-2 flex gap-2">
+                            <input type="text" id="root-uuid-input" readonly class="flex-1 p-1.5 text-xs bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded font-mono text-slate-500" placeholder="Root PARTUUID">
+                            <input type="text" id="uuid-input" readonly class="flex-1 p-1.5 text-xs bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded font-mono text-slate-500" placeholder="Swap UUID">
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 💻 SCOUT -->
+                <section id="scout" class="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700">
+                    <h3 class="font-bold text-slate-800 dark:text-white mb-3 flex items-center gap-2"><span class="text-xl">💻</span> Hardware Scout</h3>
+                    <div class="flex gap-2">
+                        <input id="scout-model" type="text" placeholder="Enter Laptop/Motherboard Model..." class="flex-1 p-2 bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-lg text-sm focus:ring-2 focus:ring-arch-500 dark:text-white">
+                        <button id="scout-btn" class="bg-slate-800 dark:bg-slate-700 text-white px-4 rounded-lg font-bold hover:bg-slate-700 text-sm">Check</button>
+                    </div>
+                    <div id="scout-result" class="mt-4 hidden bg-slate-50 dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-700 prose prose-sm dark:prose-invert max-w-none"></div>
+                </section>
+
+                <!-- PHASE 1 -->
+                <section id="phase-1" class="space-y-8">
+                    <h2 class="text-3xl font-bold text-slate-900 dark:text-white border-b border-slate-200 dark:border-slate-700 pb-4">1. Environment</h2>
+                    
+                    <!-- Rescue -->
+                    <div class="rescue-only hidden bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl p-6">
+                        <h3 class="text-lg font-bold text-red-800 dark:text-red-400 mb-2">Mount System</h3>
+                        <div class="code-block relative group">
+                            <button class="copy-btn absolute top-2 right-2 bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200 px-2 py-1 rounded text-xs font-bold">Copy</button>
+                            <pre class="bg-slate-900 text-slate-200 p-4 rounded-lg overflow-x-auto"><code class="language-bash">mount /dev/nvme0n1p3 /mnt
+mount /dev/nvme0n1p1 /mnt/boot
+arch-chroot /mnt</code></pre>
+                        </div>
+                    </div>
+
+                    <!-- Install -->
+                    <div class="install-only space-y-6">
+                        <div>
+                            <h3 class="text-xl font-semibold text-slate-800 dark:text-slate-200">1.1. Network</h3>
+                            <div class="code-block relative group mt-2">
+                                <button class="copy-btn absolute top-2 right-2 bg-slate-700 text-slate-300 hover:bg-slate-600 px-2 py-1 rounded text-xs">Copy</button>
+                                <pre class="bg-slate-900 text-slate-200 p-4 rounded-lg overflow-x-auto"><code class="language-bash">iwctl --passphrase "PASS" station wlan0 connect "SSID"
+timedatectl set-ntp true
+pacman -Sy reflector --noconfirm
+reflector --country Australia --protocol https --sort rate --save /etc/pacman.d/mirrorlist</code></pre>
+                            </div>
+                        </div>
+
+                        <div>
+                            <div class="flex justify-between items-center mb-2">
+                                <h3 class="text-xl font-semibold text-slate-800 dark:text-slate-200">1.2. Partitioning</h3>
+                                <span class="text-xs bg-arch-50 dark:bg-slate-700 text-arch-600 dark:text-arch-400 px-2 py-1 rounded-full font-bold cursor-pointer" id="trigger-architect">🧮 Architect</span>
+                            </div>
+                            <!-- Architect (Hidden by default) -->
+                            <div id="architect-panel" class="hidden bg-slate-50 dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-700 mb-4">
+                                 <div class="grid grid-cols-2 gap-4 mb-2">
+                                     <div><label class="text-xs font-semibold text-slate-500">Disk (GB)</label><input type="number" id="arch-disk" value="512" class="w-full p-2 border dark:border-slate-600 dark:bg-slate-800 rounded text-sm dark:text-white"></div>
+                                     <div><label class="text-xs font-semibold text-slate-500">RAM (GB)</label><input type="number" id="arch-ram" value="16" class="w-full p-2 border dark:border-slate-600 dark:bg-slate-800 rounded text-sm dark:text-white"></div>
+                                 </div>
+                                 <button id="arch-btn" class="w-full bg-slate-800 text-white py-2 rounded-lg text-sm font-bold">Calculate Layout</button>
+                                 <div id="arch-result" class="hidden mt-2 p-3 bg-white dark:bg-slate-800 border dark:border-slate-600 rounded font-mono text-xs whitespace-pre-wrap dark:text-slate-300"></div>
+                            </div>
+
+                            <div class="code-block relative group">
+                                <button class="copy-btn absolute top-2 right-2 bg-slate-700 text-slate-300 hover:bg-slate-600 px-2 py-1 rounded text-xs">Copy</button>
+                                <pre class="bg-slate-900 text-slate-200 p-4 rounded-lg overflow-x-auto"><code class="language-bash">cfdisk /dev/nvme0n1
+# 1. 1GB [EFI System]
+# 2. 16GB [Linux Swap]
+# 3. Rest [Linux Root]
+
+mkfs.fat -F 32 /dev/nvme0n1p1
+mkswap /dev/nvme0n1p2; swapon /dev/nvme0n1p2
+mkfs.ext4 /dev/nvme0n1p3
+mount /dev/nvme0n1p3 /mnt
+mount --mkdir /dev/nvme0n1p1 /mnt/boot</code></pre>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- PHASE 2 -->
+                <section id="phase-2" class="space-y-8 install-only">
+                    <h2 class="text-3xl font-bold text-slate-900 dark:text-white border-b border-slate-200 dark:border-slate-700 pb-4">2. Installation</h2>
+                    <div>
+                        <h3 class="text-xl font-semibold text-slate-800 dark:text-slate-200">2.1. Pacstrap</h3>
+                        <div class="code-block relative group mt-2">
+                            <button class="copy-btn absolute top-2 right-2 bg-slate-700 text-slate-300 hover:bg-slate-600 px-2 py-1 rounded text-xs">Copy</button>
+                            <pre class="bg-slate-900 text-slate-200 p-4 rounded-lg overflow-x-auto"><code class="language-bash">pacstrap -K /mnt base base-devel linux linux-lts linux-firmware neovim git networkmanager <span id="cpu-pkg" class="text-sky-300 font-bold">amd-ucode</span></code></pre>
+                        </div>
+                    </div>
+                    <div>
+                        <h3 class="text-xl font-semibold text-slate-800 dark:text-slate-200">2.2. Fstab</h3>
+                        <div class="code-block relative group mt-2">
+                            <button class="copy-btn absolute top-2 right-2 bg-slate-700 text-slate-300 hover:bg-slate-600 px-2 py-1 rounded text-xs">Copy</button>
+                            <pre class="bg-slate-900 text-slate-200 p-4 rounded-lg overflow-x-auto"><code class="language-bash">genfstab -U /mnt >> /mnt/etc/fstab</code></pre>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- PHASE 3 -->
+                <section id="phase-3" class="space-y-8">
+                    <h2 class="text-3xl font-bold text-slate-900 dark:text-white border-b border-slate-200 dark:border-slate-700 pb-4">3. Configuration</h2>
+                    
+                    <div class="rescue-only hidden">
+                        <h3 class="font-bold text-red-700 dark:text-red-400">Rebuild Initramfs</h3>
+                        <pre class="bg-slate-900 text-slate-200 p-4 rounded-lg overflow-x-auto mt-2"><code class="language-bash">mkinitcpio -P</code></pre>
+                    </div>
+
+                    <div class="install-only">
+                        <h3 class="text-xl font-semibold text-slate-800 dark:text-slate-200">3.1. Chroot & System</h3>
+                        <div class="code-block relative group mt-2">
+                            <button class="copy-btn absolute top-2 right-2 bg-slate-700 text-slate-300 hover:bg-slate-600 px-2 py-1 rounded text-xs">Copy</button>
+                            <pre class="bg-slate-900 text-slate-200 p-4 rounded-lg overflow-x-auto"><code class="language-bash">arch-chroot /mnt
+ln -sf /usr/share/zoneinfo/Australia/Melbourne /etc/localtime
+hwclock --systohc
+locale-gen
+echo "LANG=en_US.UTF-8" > /etc/locale.conf
+echo "arch-kde" > /etc/hostname</code></pre>
+                        </div>
+                    </div>
+
+                    <div>
+                        <h3 class="text-xl font-semibold text-slate-800 dark:text-slate-200 mt-6">3.2. Bootloader</h3>
+                        <p class="text-sm text-slate-600 dark:text-slate-400 mb-2">Verify UUIDs match your hardware config.</p>
+                        <div class="code-block relative group">
+                            <button class="copy-btn absolute top-2 right-2 bg-slate-700 text-slate-300 hover:bg-slate-600 px-2 py-1 rounded text-xs">Copy</button>
+                            <pre class="bg-slate-900 text-slate-200 p-4 rounded-lg overflow-x-auto"><code class="language-ini"># /boot/loader/entries/arch.conf
+title   Arch Linux
+linux   /vmlinuz-linux
+initrd  <span id="cpu-initrd" class="text-sky-300 font-bold">/amd-ucode.img</span>
+initrd  /initramfs-linux.img
+options root=PARTUUID=<span id="root-uuid-display" class="text-yellow-300 font-bold">PASTE_MAGIC_UUID</span> rw <span id="resume-param" class="text-green-300 font-bold">resume=UUID=...</span> <span id="gpu-param" class="text-pink-300 font-bold"></span></code></pre>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- PHASE 4 -->
+                <section id="phase-4" class="space-y-8 install-only">
+                    <h2 class="text-3xl font-bold text-slate-900 dark:text-white border-b border-slate-200 dark:border-slate-700 pb-4">4. Ecosystem</h2>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div class="bg-white dark:bg-slate-800 p-6 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm">
+                            <h3 class="font-bold text-slate-800 dark:text-white mb-2">Graphics Drivers</h3>
+                            <div id="gpu-instructions"></div>
+                        </div>
+                        <div class="bg-white dark:bg-slate-800 p-6 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm">
+                            <h3 class="font-bold text-slate-800 dark:text-white mb-2">Audio (PipeWire)</h3>
+                            <div class="code-block relative group">
+                                <button class="copy-btn absolute top-2 right-2 bg-slate-700 text-slate-300 hover:bg-slate-600 px-2 py-1 rounded text-xs">Copy</button>
+                                <pre class="bg-slate-900 text-slate-200 p-4 rounded-lg overflow-x-auto text-xs"><code class="language-bash">pacman -S pipewire wireplumber pipewire-pulse</code></pre>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- PHASE 5 -->
+                <section id="phase-5" class="space-y-8 install-only">
+                    <h2 class="text-3xl font-bold text-slate-900 dark:text-white border-b border-slate-200 dark:border-slate-700 pb-4">5. Desktop</h2>
+                    
+                    <!-- SCRIPT-O-MATIC -->
+                    <div class="bg-gradient-to-br from-slate-100 to-slate-200 dark:from-slate-800 dark:to-slate-900 p-8 rounded-2xl border border-slate-300 dark:border-slate-700 shadow-lg">
+                        <div class="flex items-center gap-3 mb-6"><div class="bg-slate-800 dark:bg-white dark:text-slate-900 text-white p-2 rounded-lg text-2xl">⚡</div><h2 class="text-2xl font-bold text-slate-900 dark:text-white">Script-o-matic</h2></div>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div>
+                                <textarea id="script-prompt" rows="4" class="w-full p-3 border border-slate-400 dark:border-slate-600 dark:bg-slate-900 dark:text-white rounded-xl text-sm resize-none focus:ring-2 focus:ring-arch-500" placeholder="I need VS Code, Docker, Steam..."></textarea>
+                                <button id="generate-script-btn" class="mt-4 w-full bg-slate-800 dark:bg-arch-600 text-white py-3 rounded-xl font-bold shadow-md hover:bg-slate-900 transition-all">⚡ Generate Script</button>
+                            </div>
+                            <div class="relative">
+                                 <pre class="h-48 w-full bg-slate-900 text-gray-300 p-4 rounded-xl text-xs font-mono overflow-auto border border-slate-800"><code id="script-code" class="language-bash"># Script will appear here...</code></pre>
+                                 <button class="copy-script-btn absolute top-2 right-2 bg-slate-700 text-white px-2 py-1 rounded text-xs hover:bg-slate-600">Copy</button>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- PHASE 6 -->
+                <section id="phase-6" class="space-y-8 install-only">
+                    <h2 class="text-3xl font-bold text-slate-900 dark:text-white border-b border-slate-200 dark:border-slate-700 pb-4">6. Maintenance</h2>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                        <div class="bg-red-50 dark:bg-red-900/20 p-6 rounded-2xl border border-red-200 dark:border-red-800">
+                            <h3 class="font-bold text-red-900 dark:text-red-200 mb-4">🔥 Firewall</h3>
+                            <div class="code-block relative group">
+                                <button class="copy-btn absolute top-2 right-2 bg-slate-700 text-slate-300 hover:bg-slate-600 px-2 py-1 rounded text-xs font-semibold">Copy</button>
+                                <pre class="bg-slate-900 text-slate-200 p-4 rounded-lg overflow-x-auto"><code class="language-bash">pacman -S ufw; ufw enable</code></pre>
+                            </div>
+                        </div>
+                        <div class="bg-emerald-50 dark:bg-emerald-900/20 p-6 rounded-2xl border border-emerald-200 dark:border-emerald-800">
+                            <h3 class="font-bold text-emerald-900 dark:text-emerald-200 mb-4">🧹 Cleanup</h3>
+                            <div class="code-block relative group">
+                                <button class="copy-btn absolute top-2 right-2 bg-slate-700 text-slate-300 hover:bg-slate-600 px-2 py-1 rounded text-xs font-semibold">Copy</button>
+                                <pre class="bg-slate-900 text-slate-200 p-4 rounded-lg overflow-x-auto"><code class="language-bash">pacman -S pacman-contrib
+systemctl enable paccache.timer</code></pre>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+            </main>
+        </div>
+    </div>
+
+    <!-- FLOATING TOOLS -->
+    <div class="fixed bottom-6 right-6 z-50 flex flex-col gap-4 items-end">
+        <button id="doctor-btn" class="bg-blue-600 text-white p-4 rounded-full shadow-lg hover:scale-105 transition-transform" title="Config Doctor"><span class="text-xl">🔍</span></button>
+        <button id="medic-btn" class="bg-red-600 text-white p-4 rounded-full shadow-lg hover:scale-105 transition-transform" title="Error Medic"><span class="text-xl">🚑</span></button>
+        <button id="chat-toggle" class="bg-slate-800 dark:bg-arch-600 text-white p-4 rounded-full shadow-lg hover:scale-105 transition-transform" title="AI Assistant"><span class="text-xl">🤖</span></button>
+    </div>
+
+    <!-- MODALS -->
+    <div id="doctor-modal" class="fixed inset-0 z-[60] hidden"><div class="modal-backdrop absolute inset-0 transition-opacity bg-slate-900/50 backdrop-blur-sm"></div><div class="absolute inset-0 flex items-center justify-center p-4 pointer-events-none"><div class="bg-white dark:bg-slate-800 w-full max-w-2xl rounded-2xl shadow-2xl pointer-events-auto flex flex-col max-h-[90vh] border border-slate-200 dark:border-slate-700 overflow-hidden"><div class="bg-blue-600 p-4 text-white flex justify-between items-center"><h3 class="font-bold flex items-center gap-2"><span class="text-xl">🔍</span> Config Doctor</h3><button id="close-doctor" class="hover:bg-blue-700 p-1 rounded">✕</button></div><div class="p-6 flex-1 overflow-y-auto"><select id="doc-file-type" class="w-full p-2 mb-4 border rounded dark:bg-slate-700 dark:border-slate-600 dark:text-white"><option value="bootloader">Bootloader (arch.conf)</option><option value="fstab">Fstab</option></select><textarea id="doc-input" rows="6" class="w-full p-4 border rounded-xl font-mono text-xs bg-slate-50 dark:bg-slate-900 dark:border-slate-600 dark:text-slate-300 mb-4" placeholder="Paste file content..."></textarea><button id="doc-analyze-btn" class="w-full bg-blue-600 text-white py-3 rounded-xl font-bold hover:bg-blue-700">Analyze</button><div id="doc-result" class="mt-4 hidden p-4 rounded-xl border dark:text-white"></div></div></div></div></div>
+
+    <div id="medic-modal" class="fixed inset-0 z-[60] hidden"><div class="modal-backdrop absolute inset-0 transition-opacity bg-slate-900/50 backdrop-blur-sm"></div><div class="absolute inset-0 flex items-center justify-center p-4 pointer-events-none"><div class="bg-white dark:bg-slate-800 w-full max-w-2xl rounded-2xl shadow-2xl pointer-events-auto flex flex-col max-h-[90vh] border border-slate-200 dark:border-slate-700 overflow-hidden"><div class="bg-red-600 p-4 text-white flex justify-between items-center"><h3 class="font-bold flex items-center gap-2"><span class="text-xl">🚑</span> Error Medic</h3><button id="close-medic" class="hover:bg-red-700 p-1 rounded">✕</button></div><div class="p-6 flex-1 overflow-y-auto"><textarea id="error-input" rows="6" class="w-full p-4 border rounded-xl font-mono text-xs bg-slate-50 dark:bg-slate-900 dark:border-slate-600 dark:text-slate-300 mb-4" placeholder="Paste error log..."></textarea><button id="diagnose-btn" class="w-full bg-red-600 text-white py-3 rounded-xl font-bold hover:bg-red-700">Diagnose</button><div id="diagnosis-result" class="mt-6 hidden"><p id="medic-cause" class="font-bold text-red-800 dark:text-red-300 mb-2"></p><pre class="bg-slate-900 text-green-400 p-4 rounded-xl text-xs overflow-x-auto"><code id="medic-fix"></code></pre></div></div></div></div></div>
+
+    <!-- CHAT -->
+    <div id="chat-window" class="hidden fixed bottom-24 right-6 w-80 sm:w-96 bg-white dark:bg-slate-800 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 z-50 flex flex-col h-[500px] overflow-hidden animate-fade-in">
+        <div class="bg-slate-800 dark:bg-arch-600 p-4 text-white flex justify-between items-center"><div class="flex items-center gap-2"><span>🤖</span><span class="font-bold text-sm">Arch Assistant</span></div><button id="close-chat" class="hover:bg-white/10 p-1 rounded">✕</button></div>
+        <div id="chat-messages" class="flex-1 overflow-y-auto p-4 space-y-4 bg-slate-50 dark:bg-slate-900"><div class="ai-message p-3 text-sm shadow-sm rounded-r-lg rounded-bl-lg bg-white dark:bg-slate-800 dark:text-slate-200 border border-slate-100 dark:border-slate-700">Hello! I'm ready to help.</div></div>
+        <div class="p-3 bg-white dark:bg-slate-800 border-t border-slate-200 dark:border-slate-700 flex gap-2"><input id="chat-input" class="flex-1 border dark:border-slate-600 rounded-lg px-3 bg-slate-50 dark:bg-slate-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-arch-500" placeholder="Type message..."><button id="send-btn" class="bg-slate-800 dark:bg-arch-600 text-white px-3 rounded-lg hover:bg-slate-700 transition-colors">➤</button></div>
+    </div>
+
+    <script>
+        // --- CONFIG ---
+        const apiKey = ""; 
+        const MODEL = "gemini-2.5-flash-preview-09-2025";
+        const API = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent`;
+
+        async function callGemini(txt, json=false) {
+            if(!apiKey) return json ? "{}" : "Error: No API Key configured.";
+            try {
+                const req = await fetch(`${API}?key=${apiKey}`, {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({contents:[{parts:[{text:txt}]}], generationConfig: json ? {responseMimeType:"application/json"} : {}})});
+                const res = await req.json();
+                return res.candidates?.[0]?.content?.parts?.[0]?.text || (json?"{}":"Error generating response.");
+            } catch(e) { return json?"{}":"Connection Error. Check internet."; }
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            // --- SELECTORS ---
+            const ui = {
+                cpu: document.querySelectorAll('input[name="cpu"]'),
+                gpu: document.querySelectorAll('input[name="gpu"]'),
+                magicPaste: document.getElementById('magic-paste'),
+                magicBtn: document.getElementById('magic-btn'),
+                uuid: document.getElementById('uuid-input'),
+                rootUuid: document.getElementById('root-uuid-input'),
+                rescueToggle: document.getElementById('rescue-toggle'),
+                searchBtn: document.getElementById('search-btn'),
+                searchInp: document.getElementById('smart-search'),
+                searchResults: document.getElementById('search-results'),
+                themeToggle: document.getElementById('theme-toggle'),
+                outputs: {
+                    cpuPkg: document.getElementById('cpu-pkg'),
+                    cpuInitrd: document.getElementById('cpu-initrd'),
+                    gpuInst: document.getElementById('gpu-instructions'),
+                    rootDisplay: document.getElementById('root-uuid-display'),
+                    resumeParam: document.getElementById('resume-param'),
+                    gpuParam: document.getElementById('gpu-param')
+                },
+                // Tools
+                doctorBtn: document.getElementById('doctor-btn'),
+                closeDoctor: document.getElementById('close-doctor'),
+                medicBtn: document.getElementById('medic-btn'),
+                closeMedic: document.getElementById('close-medic'),
+                chatToggle: document.getElementById('chat-toggle'),
+                closeChat: document.getElementById('close-chat'),
+                archTrigger: document.getElementById('trigger-architect'),
+                archBtn: document.getElementById('arch-btn'),
+                scriptBtn: document.getElementById('generate-script-btn')
+            };
+
+            // --- STATE & PERSISTENCE ---
+            const state = {
+                cpu: localStorage.getItem('arch_cpu') || 'amd',
+                gpu: localStorage.getItem('arch_gpu') || 'amd',
+                swapUuid: localStorage.getItem('arch_swap') || '',
+                rootUuid: localStorage.getItem('arch_root') || '',
+                theme: localStorage.getItem('arch_theme') || 'light',
+                rescue: false
+            };
+
+            function saveState() {
+                localStorage.setItem('arch_cpu', state.cpu);
+                localStorage.setItem('arch_gpu', state.gpu);
+                localStorage.setItem('arch_swap', state.swapUuid);
+                localStorage.setItem('arch_root', state.rootUuid);
+                localStorage.setItem('arch_theme', state.theme);
+            }
+
+            function initUI() {
+                // Restore Radios
+                document.querySelector(`input[name="cpu"][value="${state.cpu}"]`).checked = true;
+                document.querySelector(`input[name="gpu"][value="${state.gpu}"]`).checked = true;
+                // Restore UUIDs
+                ui.uuid.value = state.swapUuid;
+                ui.rootUuid.value = state.rootUuid;
+                // Restore Theme
+                if (state.theme === 'dark') {
+                    document.documentElement.classList.add('dark');
+                    document.getElementById('theme-icon-sun').classList.remove('hidden');
+                    document.getElementById('theme-icon-moon').classList.add('hidden');
+                }
+                updateCodes();
+            }
+
+            // --- LOGIC ---
+            const templates = {
+                gpu: {
+                    amd: `<pre class="bg-slate-900 text-slate-200 p-4 rounded-lg overflow-x-auto"><code class="language-bash">pacman -S mesa vulkan-radeon libva-mesa-driver</code></pre>`,
+                    intel: `<pre class="bg-slate-900 text-slate-200 p-4 rounded-lg overflow-x-auto"><code class="language-bash">pacman -S mesa vulkan-intel</code></pre>`,
+                    nvidia: `<pre class="bg-slate-900 text-slate-200 p-4 rounded-lg overflow-x-auto"><code class="language-bash">pacman -S nvidia-dkms nvidia-utils egl-wayland libva-nvidia-driver</code></pre>`
+                }
+            };
+
+            function updateCodes() {
+                const micro = state.cpu === 'intel' ? 'intel-ucode' : 'amd-ucode';
+                if(ui.outputs.cpuPkg) ui.outputs.cpuPkg.textContent = micro;
+                if(ui.outputs.cpuInitrd) ui.outputs.cpuInitrd.textContent = `/${micro}.img`;
+                if(ui.outputs.gpuInst) ui.outputs.gpuInst.innerHTML = templates.gpu[state.gpu];
+                if(ui.outputs.gpuParam) ui.outputs.gpuParam.textContent = state.gpu === 'nvidia' ? 'nvidia_drm.modeset=1' : '';
+                if(ui.outputs.rootDisplay) ui.outputs.rootDisplay.textContent = state.rootUuid || 'PASTE_MAGIC_UUID';
+                if(ui.outputs.resumeParam) ui.outputs.resumeParam.textContent = state.swapUuid ? `resume=UUID=${state.swapUuid}` : 'resume=UUID=...';
+                attachListeners();
+            }
+
+            function attachListeners() {
+                document.querySelectorAll('.copy-btn').forEach(b => b.onclick = (e) => {
+                    const c = e.target.closest('.code-block').querySelector('code').innerText;
+                    navigator.clipboard.writeText(c);
+                    e.target.innerText = "Copied!"; setTimeout(()=>e.target.innerText="Copy", 2000);
+                });
+                // Re-attach explain listeners if needed
+            }
+
+            // --- EVENT HANDLERS ---
+            
+            // Hardware Change
+            ui.cpu.forEach(r => r.onchange = (e) => { state.cpu = e.target.value; saveState(); updateCodes(); });
+            ui.gpu.forEach(r => r.onchange = (e) => { state.gpu = e.target.value; saveState(); updateCodes(); });
+
+            // Dark Mode
+            ui.themeToggle.onclick = () => {
+                state.theme = state.theme === 'light' ? 'dark' : 'light';
+                document.documentElement.classList.toggle('dark');
+                document.getElementById('theme-icon-sun').classList.toggle('hidden');
+                document.getElementById('theme-icon-moon').classList.toggle('hidden');
+                saveState();
+            };
+
+            // Magic Paste
+            if(ui.magicBtn) {
+                ui.magicBtn.onclick = async () => {
+                    const txt = ui.magicPaste.value; if(!txt) return;
+                    ui.magicBtn.innerText = "...";
+                    const data = JSON.parse(await callGemini(`Parse lsblk output. Return JSON: { "swap_uuid": "val", "root_partuuid": "val" }. Text: ${txt}`, true));
+                    if(data.swap_uuid) state.swapUuid = data.swap_uuid;
+                    if(data.root_partuuid) state.rootUuid = data.root_partuuid;
+                    saveState(); initUI(); ui.magicBtn.innerText = "✨ Auto-Fill";
+                };
+            }
+
+            // Search
+            if(ui.searchBtn) {
+                const runSearch = async () => {
+                    const q = ui.searchInp.value.trim(); if(!q) return;
+                    ui.searchBtn.innerText = "...";
+                    ui.searchResults.classList.remove('hidden');
+                    try {
+                        const res = JSON.parse(await callGemini(`Navigation helper. Query: "${q}". Valid IDs: configurator, phase-1, phase-2, phase-3, phase-4, phase-5, phase-6. JSON: { "summary": "txt", "sectionId": "id" }`, true));
+                        ui.searchResults.innerHTML = `<div class="p-3 hover:bg-slate-50 dark:hover:bg-slate-700 cursor-pointer transition-colors" onclick="document.getElementById('${res.sectionId}').scrollIntoView({behavior:'smooth'}); document.getElementById('search-results').classList.add('hidden');"><div class="font-bold text-arch-600 text-sm">Go to: ${res.sectionId}</div><div class="text-sm text-slate-600 dark:text-slate-300">${res.summary}</div></div>`;
+                    } catch(e) { ui.searchResults.innerHTML = "<div class='p-2 text-red-500 text-sm'>Search failed.</div>"; }
+                    ui.searchBtn.innerText = "✨ Search";
+                };
+                ui.searchBtn.onclick = runSearch;
+                ui.searchInp.onkeypress = (e) => { if(e.key === 'Enter') runSearch(); };
+                // Keyboard Shortcut: Press '/' to focus search
+                document.addEventListener('keydown', (e) => {
+                    if (e.key === '/' && document.activeElement !== ui.searchInp) {
+                        e.preventDefault();
+                        ui.searchInp.focus();
+                    }
+                    if (e.key === 'Escape') {
+                        document.querySelectorAll('.fixed.z-\\[60\\]').forEach(m => m.classList.add('hidden'));
+                        ui.searchResults.classList.add('hidden');
+                    }
+                });
+            }
+
+            // Rescue Mode
+            ui.rescueToggle.onclick = () => {
+                state.rescue = !state.rescue;
+                document.body.classList.toggle('rescue-mode', state.rescue);
+                document.body.classList.toggle('rescue-active', state.rescue);
+                document.getElementById('rescue-banner').classList.toggle('hidden', !state.rescue);
+                document.querySelectorAll('.install-only').forEach(el => el.classList.toggle('hidden', state.rescue));
+                document.querySelectorAll('.rescue-only').forEach(el => el.classList.toggle('hidden', !state.rescue));
+                
+                const btnText = ui.rescueToggle.querySelector('span:last-child');
+                if(state.rescue) {
+                    ui.rescueToggle.classList.add('border-red-500', 'text-red-500');
+                    btnText.innerText = "Exit Rescue";
+                } else {
+                    ui.rescueToggle.classList.remove('border-red-500', 'text-red-500');
+                    btnText.innerText = "Rescue";
+                }
+            };
+
+            // Tool Toggles (Doctor, Medic, Chat, Architect)
+            const toggleModal = (id) => {
+                const el = document.getElementById(id);
+                el.classList.toggle('hidden');
+            };
+            
+            ui.doctorBtn.onclick = () => toggleModal('doctor-modal');
+            ui.closeDoctor.onclick = () => toggleModal('doctor-modal');
+            ui.medicBtn.onclick = () => toggleModal('medic-modal');
+            ui.closeMedic.onclick = () => toggleModal('medic-modal');
+            ui.chatToggle.onclick = () => toggleModal('chat-window');
+            ui.closeChat.onclick = () => toggleModal('chat-window');
+            if(ui.archTrigger) ui.archTrigger.onclick = () => document.getElementById('architect-panel').classList.toggle('hidden');
+
+            // AI Handlers
+            if(ui.archBtn) ui.archBtn.onclick = async () => {
+                ui.archBtn.innerText = "...";
+                const d = document.getElementById('arch-disk').value;
+                const r = document.getElementById('arch-ram').value;
+                const res = await callGemini(`Calc Arch partitions. Disk=${d}GB RAM=${r}GB. Simple text summary.`);
+                const out = document.getElementById('arch-result');
+                out.innerText = res; out.classList.remove('hidden'); ui.archBtn.innerText = "Calculate";
+            };
+
+            if(ui.scriptBtn) ui.scriptBtn.onclick = async () => {
+                const p = document.getElementById('script-prompt').value; if(!p) return;
+                ui.scriptBtn.innerText = "Generating...";
+                const res = await callGemini(`Bash script for Arch post-install. Requirements: "${p}". RAW CODE ONLY.`, false);
+                document.getElementById('script-code').textContent = res;
+                ui.scriptBtn.innerText = "⚡ Generate";
+            };
+
+            document.getElementById('doc-analyze-btn').onclick = async () => {
+               const c = document.getElementById('doc-input').value;
+               const res = JSON.parse(await callGemini(`Audit config. JSON {status, message}. Content: ${c}`, true));
+               document.getElementById('doc-result').innerHTML = `<b>${res.status}</b>: ${res.message}`;
+               document.getElementById('doc-result').classList.remove('hidden');
+            };
+
+            document.getElementById('diagnose-btn').onclick = async () => {
+               const c = document.getElementById('error-input').value;
+               const res = JSON.parse(await callGemini(`Fix Arch error. JSON {cause, fix}. Log: ${c}`, true));
+               document.getElementById('medic-cause').innerText = res.cause;
+               document.getElementById('medic-fix').innerText = res.fix;
+               document.getElementById('diagnosis-result').classList.remove('hidden');
+            };
+
+            document.getElementById('send-btn').onclick = async () => {
+               const i = document.getElementById('chat-input');
+               const d = document.getElementById('chat-messages');
+               if(!i.value.trim()) return;
+               d.innerHTML += `<div class="p-3 bg-slate-100 dark:bg-slate-700 rounded-l-lg rounded-br-lg self-end text-sm mb-2 dark:text-white shadow-sm max-w-[85%]">${i.value}</div>`;
+               const val = i.value; i.value = "";
+               const resp = await callGemini(`Arch Help. User: ${val}`);
+               d.innerHTML += `<div class="p-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-r-lg rounded-bl-lg self-start text-sm mb-2 dark:text-slate-200 shadow-sm max-w-[85%] prose dark:prose-invert">${marked.parse(resp)}</div>`;
+               d.scrollTop = d.scrollHeight;
+            };
+            document.getElementById('chat-input').onkeypress = (e) => { if(e.key === 'Enter') document.getElementById('send-btn').click(); };
+
+            // Start
+            initUI();
+        });
+    </script>
+</body>
+</html>
